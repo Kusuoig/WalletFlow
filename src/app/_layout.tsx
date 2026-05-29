@@ -1,16 +1,38 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { initDatabase } from '../db/schema';
+import { useCardsStore } from '../store/useCardsStore';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const [dbReady, setDbReady] = useState(false);
+  const loadCards = useCardsStore((state) => state.loadCards);
+
+  useEffect(() => {
+    async function setup() {
+      try {
+        await initDatabase();
+        await loadCards();
+      } catch (e) {
+        console.error('Error initializing app:', e);
+      } finally {
+        setDbReady(true);
+        SplashScreen.hideAsync();
+      }
+    }
+    setup();
+  }, []);
+
+  if (!dbReady) {
+    return null;
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="card/[id]" options={{ presentation: 'modal', title: 'Card Details' }} />
+    </Stack>
   );
 }
