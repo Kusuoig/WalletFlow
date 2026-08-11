@@ -9,6 +9,7 @@ import { Transaction } from '../../types';
 import TransactionRow from '../../components/TransactionRow';
 import AdjustmentModal from '../../components/AdjustmentModal';
 import PaymentModal from '../../components/PaymentModal';
+import CardFormModal from '../../components/CardFormModal';
 import { COLORS } from '../../constants/theme';
 
 export default function CardDetailScreen() {
@@ -23,6 +24,7 @@ export default function CardDetailScreen() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [isAdjustmentModalVisible, setAdjustmentModalVisible] = useState(false);
   const [isPaymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   useEffect(() => {
     if (card) {
@@ -89,19 +91,24 @@ export default function CardDetailScreen() {
 
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.actionBtn} onPress={() => setAdjustmentModalVisible(true)}>
-          <Ionicons name="options" size={24} color="#007AFF" />
+          <Ionicons name="options" size={22} color="#007AFF" />
           <Text style={styles.actionText}>Ajuste</Text>
         </TouchableOpacity>
         
         {isCredit && (
           <TouchableOpacity style={styles.actionBtn} onPress={() => setPaymentModalVisible(true)}>
-            <Ionicons name="cash" size={24} color={COLORS.debit} />
+            <Ionicons name="cash" size={22} color={COLORS.debit} />
             <Text style={styles.actionText}>Pagar</Text>
           </TouchableOpacity>
         )}
 
+        <TouchableOpacity style={styles.actionBtn} onPress={() => setIsEditModalVisible(true)}>
+          <Ionicons name="settings-outline" size={22} color="#5856D6" />
+          <Text style={styles.actionText}>Configurar</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.actionBtn} onPress={handleDelete}>
-          <Ionicons name="trash" size={24} color={COLORS.credit} />
+          <Ionicons name="trash" size={22} color={COLORS.credit} />
           <Text style={styles.actionText}>Eliminar</Text>
         </TouchableOpacity>
       </View>
@@ -137,6 +144,12 @@ export default function CardDetailScreen() {
           onSuccess={loadHistory}
         />
       )}
+
+      <CardFormModal
+        visible={isEditModalVisible}
+        cardToEdit={card}
+        onClose={() => setIsEditModalVisible(false)}
+      />
     </View>
   );
 }
@@ -190,8 +203,8 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
@@ -199,7 +212,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-    minWidth: 90,
+    flex: 1,
+    minWidth: 70,
   },
   actionText: {
     marginTop: 6,

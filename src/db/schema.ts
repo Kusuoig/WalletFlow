@@ -15,6 +15,7 @@ export async function initDatabase() {
       balance     REAL NOT NULL DEFAULT 0,
       credit_limit REAL,          -- only for credit, can be null
       due_date    INTEGER,        -- cut-off day of the month (1-31), only credit
+      payment_due_day INTEGER,    -- payment due day of the month (1-31), only credit
       color       TEXT,           -- hex color for the card in UI
       created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
       updated_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -30,6 +31,13 @@ export async function initDatabase() {
       created_at      TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     );
   `);
+
+  // Migración para añadir payment_due_day a bases de datos existentes
+  try {
+    await db.execAsync('ALTER TABLE cards ADD COLUMN payment_due_day INTEGER;');
+  } catch (error) {
+    // Si la columna ya existe, SQLite lanzará un error que podemos ignorar
+  }
   
   return db;
 }

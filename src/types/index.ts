@@ -9,6 +9,7 @@ export interface Card {
   balance: number;        // negative if credit, positive if debit
   credit_limit?: number | null;
   due_date?: number | null;      // day of the month
+  payment_due_day?: number | null; // day of the month for payment
   color?: string;
   created_at: string;
   updated_at: string;

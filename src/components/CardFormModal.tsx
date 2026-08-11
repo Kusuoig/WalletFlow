@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,37 +14,29 @@ import {
   Image,
 } from "react-native";
 import { COLORS as APP_COLORS } from "../constants/theme";
-import { addCard } from "../db/cards";
+import { addCard, updateCard } from "../db/cards";
 import { useCardsStore } from "../store/useCardsStore";
+import { Card } from "../types";
 
 interface CardFormModalProps {
   visible: boolean;
   onClose: () => void;
+  cardToEdit?: Card;
 }
 
 const PREDEFINED_BANKS = [
-  { id: "bbva", name: "BBVA", logo: "https://logo.clearbit.com/bbva.com", supportedTypes: ["debit", "credit"], defaultColor: "#004481" },
-  { id: "santander", name: "Santander", logo: "https://logo.clearbit.com/santander.com", supportedTypes: ["debit", "credit"], defaultColor: "#EC0000" },
-  { id: "revolut", name: "Revolut", logo: "https://logo.clearbit.com/revolut.com", supportedTypes: ["debit"], defaultColor: "#191C1F" },
-  { id: "openbank", name: "Openbank", logo: "https://logo.clearbit.com/openbank.com", supportedTypes: ["debit", "credit"], defaultColor: "#FF007A" },
-  { id: "uala", name: "Ualá", logo: "https://logo.clearbit.com/uala.mx", supportedTypes: ["debit", "credit"], defaultColor: "#6300E6" },
-  { id: "plata", name: "Plata", logo: "https://logo.clearbit.com/platacard.mx", supportedTypes: ["credit"], defaultColor: "#1A1A1A" },
-];
-
-const COLORS = [
-  "#007AFF", // Blue
-  APP_COLORS.debit, // Green
-  "#FF9500", // Orange
-  APP_COLORS.credit, // Red
-  "#5856D6", // Purple
-  "#FF2D55", // Pink
-  "#AF52DE", // Violet
-  "#8E8E93", // Gray
+  { id: "bbva", name: "BBVA", logo: "https://www.google.com/s2/favicons?domain=bbva.mx&sz=128", supportedTypes: ["debit", "credit"], defaultColor: "#004481" },
+  { id: "santander", name: "Santander", logo: "https://www.google.com/s2/favicons?domain=santander.com.mx&sz=128", supportedTypes: ["debit", "credit"], defaultColor: "#EC0000" },
+  { id: "revolut", name: "Revolut", logo: "https://www.google.com/s2/favicons?domain=revolut.com&sz=128", supportedTypes: ["debit"], defaultColor: "#191C1F" },
+  { id: "openbank", name: "Openbank", logo: "https://www.google.com/s2/favicons?domain=openbank.es&sz=128", supportedTypes: ["debit", "credit"], defaultColor: "#FF007A" },
+  { id: "uala", name: "Ualá", logo: "https://www.google.com/s2/favicons?domain=uala.com.mx&sz=128", supportedTypes: ["debit", "credit"], defaultColor: "#6300E6" },
+  { id: "plata", name: "Plata", logo: "https://www.google.com/s2/favicons?domain=platacard.mx&sz=128", supportedTypes: ["credit"], defaultColor: "#1A1A1A" },
 ];
 
 export default function CardFormModal({
   visible,
   onClose,
+  cardToEdit,
 }: CardFormModalProps) {
   const [name, setName] = useState("");
   const [bank, setBank] = useState("");
@@ -54,10 +46,48 @@ export default function CardFormModal({
   const [balance, setBalance] = useState("");
   const [creditLimit, setCreditLimit] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
+  const [paymentDueDay, setPaymentDueDay] = useState("");
+  const [selectedColor, setSelectedColor] = useState(APP_COLORS.debit);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadCards = useCardsStore((state) => state.loadCards);
+
+  useEffect(() => {
+    if (visible && cardToEdit) {
+      setName(cardToEdit.name);
+      setType(cardToEdit.type);
+      setBalance(Math.abs(cardToEdit.balance).toString());
+      setCreditLimit(cardToEdit.credit_limit ? cardToEdit.credit_limit.toString() : "");
+      setDueDate(cardToEdit.due_date ? cardToEdit.due_date.toString() : "");
+      setPaymentDueDay(cardToEdit.payment_due_day ? cardToEdit.payment_due_day.toString() : "");
+      setSelectedColor(cardToEdit.color || (cardToEdit.type === "debit" ? APP_COLORS.debit : APP_COLORS.credit));
+      
+      const matched = PREDEFINED_BANKS.find(b => b.name.toLowerCase() === cardToEdit.bank.toLowerCase());
+      if (matched) {
+        setSelectedBank(matched.id);
+      } else {
+        setSelectedBank("custom");
+        setCustomBankName(cardToEdit.bank);
+        setBank(cardToEdit.bank);
+      }
+    } else if (visible) {
+      // Agregar tarjeta nuevo estado
+      setName("");
+      setBank("");
+      setSelectedBank(null);
+      setCustomBankName("");
+      setType("debit");
+      setBalance("");
+      setCreditLimit("");
+      setDueDate("");
+      setPaymentDueDay("");
+      setSelectedColor(APP_COLORS.debit);
+    }
+  }, [visible, cardToEdit]);
+
+  const filteredBanks = PREDEFINED_BANKS.filter((b) =>
+    b.supportedTypes.includes(type)
+  );
 
   const handleSave = async () => {
     if (!name.trim()) return Alert.alert("Error", "El nombre es obligatorio");
@@ -72,28 +102,47 @@ export default function CardFormModal({
 
     let parsedLimit = 0;
     let parsedDueDate = 0;
+    let parsedPaymentDueDay = 0;
 
     if (type === "credit") {
       parsedLimit = parseFloat(creditLimit) || 0;
       parsedDueDate = parseInt(dueDate, 10) || 0;
+      parsedPaymentDueDay = parseInt(paymentDueDay, 10) || 0;
 
       if (parsedLimit <= 0)
         return Alert.alert("Error", "El límite de crédito debe ser mayor a 0");
       if (parsedDueDate < 1 || parsedDueDate > 31)
         return Alert.alert("Error", "El día de corte debe estar entre 1 y 31");
+      if (parsedPaymentDueDay < 1 || parsedPaymentDueDay > 31)
+        return Alert.alert("Error", "El día de pago debe estar entre 1 y 31");
     }
 
     setIsSubmitting(true);
     try {
-      await addCard(
-        name.trim(),
-        bank.trim(),
-        type,
-        parsedBalance,
-        type === "credit" ? parsedLimit : undefined,
-        type === "credit" ? parsedDueDate : undefined,
-        selectedColor,
-      );
+      if (cardToEdit) {
+        await updateCard(
+          cardToEdit.id,
+          name.trim(),
+          bank.trim(),
+          type,
+          parsedBalance,
+          type === "credit" ? parsedLimit : null,
+          type === "credit" ? parsedDueDate : null,
+          selectedColor,
+          type === "credit" ? parsedPaymentDueDay : null
+        );
+      } else {
+        await addCard(
+          name.trim(),
+          bank.trim(),
+          type,
+          parsedBalance,
+          type === "credit" ? parsedLimit : undefined,
+          type === "credit" ? parsedDueDate : undefined,
+          selectedColor,
+          type === "credit" ? parsedPaymentDueDay : undefined
+        );
+      }
 
       await loadCards(); // Actualizar estado global
       handleClose();
@@ -109,21 +158,31 @@ export default function CardFormModal({
     setSelectedBank(bankId);
     if (bankId === "custom") {
       setBank(customBankName);
+      setSelectedColor(type === "debit" ? APP_COLORS.debit : APP_COLORS.credit);
     } else {
       const selectedInfo = PREDEFINED_BANKS.find((b) => b.id === bankId);
       if (selectedInfo) {
         setBank(selectedInfo.name);
         setSelectedColor(selectedInfo.defaultColor);
-        // Automatically adjust type if current type is not supported
-        if (!selectedInfo.supportedTypes.includes(type)) {
-          setType(selectedInfo.supportedTypes[0]);
-        }
       }
     }
   };
 
+  const handleTypeChange = (newType: "debit" | "credit") => {
+    setType(newType);
+    if (selectedBank && selectedBank !== "custom") {
+      const bankData = PREDEFINED_BANKS.find(b => b.id === selectedBank);
+      if (bankData && !bankData.supportedTypes.includes(newType)) {
+        setSelectedBank(null);
+        setBank("");
+        setSelectedColor(newType === "debit" ? APP_COLORS.debit : APP_COLORS.credit);
+      }
+    } else {
+      setSelectedColor(newType === "debit" ? APP_COLORS.debit : APP_COLORS.credit);
+    }
+  };
+
   const handleClose = () => {
-    // Resetear formulario al cerrar
     setName("");
     setBank("");
     setSelectedBank(null);
@@ -132,7 +191,8 @@ export default function CardFormModal({
     setBalance("");
     setCreditLimit("");
     setDueDate("");
-    setSelectedColor(COLORS[0]);
+    setPaymentDueDay("");
+    setSelectedColor(APP_COLORS.debit);
     onClose();
   };
 
@@ -148,7 +208,7 @@ export default function CardFormModal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Agregar Tarjeta</Text>
+          <Text style={styles.title}>{cardToEdit ? "Editar Tarjeta" : "Agregar Tarjeta"}</Text>
           <TouchableOpacity onPress={handleClose}>
             <Ionicons name="close" size={28} color="#000" />
           </TouchableOpacity>
@@ -163,19 +223,13 @@ export default function CardFormModal({
               style={[
                 styles.typeButton,
                 type === "debit" && styles.typeButtonActive,
-                selectedBank && !PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("debit") && styles.typeButtonDisabled,
               ]}
-              onPress={() => {
-                const supports = !selectedBank || PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("debit");
-                if (supports) setType("debit");
-              }}
-              disabled={selectedBank !== null && selectedBank !== "custom" && !PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("debit")}
+              onPress={() => handleTypeChange("debit")}
             >
               <Text
                 style={[
                   styles.typeButtonText,
                   type === "debit" && styles.typeButtonTextActive,
-                  selectedBank && !PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("debit") && styles.typeButtonTextDisabled,
                 ]}
               >
                 Débito
@@ -185,19 +239,13 @@ export default function CardFormModal({
               style={[
                 styles.typeButton,
                 type === "credit" && styles.typeButtonActive,
-                selectedBank && !PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("credit") && styles.typeButtonDisabled,
               ]}
-              onPress={() => {
-                const supports = !selectedBank || PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("credit");
-                if (supports) setType("credit");
-              }}
-              disabled={selectedBank !== null && selectedBank !== "custom" && !PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("credit")}
+              onPress={() => handleTypeChange("credit")}
             >
               <Text
                 style={[
                   styles.typeButtonText,
                   type === "credit" && styles.typeButtonTextActive,
-                  selectedBank && !PREDEFINED_BANKS.find(b => b.id === selectedBank)?.supportedTypes.includes("credit") && styles.typeButtonTextDisabled,
                 ]}
               >
                 Crédito
@@ -212,7 +260,7 @@ export default function CardFormModal({
               showsHorizontalScrollIndicator={false} 
               contentContainerStyle={styles.bankListContainer}
             >
-              {PREDEFINED_BANKS.map((b) => (
+              {filteredBanks.map((b) => (
                 <TouchableOpacity
                   key={b.id}
                   style={[
@@ -249,6 +297,7 @@ export default function CardFormModal({
                 onChangeText={(text) => {
                   setCustomBankName(text);
                   setBank(text);
+                  setSelectedColor(type === "debit" ? APP_COLORS.debit : APP_COLORS.credit);
                 }}
                 placeholder="Ingresa el nombre del banco..."
               />
@@ -302,32 +351,20 @@ export default function CardFormModal({
                   maxLength={2}
                 />
               </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Día de Pago (1-31)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={paymentDueDay}
+                  onChangeText={setPaymentDueDay}
+                  keyboardType="number-pad"
+                  placeholder="5"
+                  maxLength={2}
+                />
+              </View>
             </>
           )}
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Color</Text>
-            <View style={styles.colorPalette}>
-              {COLORS.map((color) => (
-                <TouchableOpacity
-                  key={color}
-                  style={[
-                    styles.colorCircle,
-                    { backgroundColor: color },
-                    selectedColor === color && styles.colorCircleSelected,
-                  ]}
-                  onPress={() => setSelectedColor(color)}
-                />
-              ))}
-            </View>
-            <TextInput
-              style={[styles.input, { marginTop: 12 }]}
-              value={selectedColor}
-              onChangeText={setSelectedColor}
-              placeholder="#HEXCOLOR"
-              autoCapitalize="none"
-            />
-          </View>
 
           <TouchableOpacity
             style={[
@@ -338,7 +375,7 @@ export default function CardFormModal({
             disabled={isSubmitting}
           >
             <Text style={styles.saveButtonText}>
-              {isSubmitting ? "Guardando..." : "Guardar Tarjeta"}
+              {isSubmitting ? "Guardando..." : cardToEdit ? "Guardar Cambios" : "Guardar Tarjeta"}
             </Text>
           </TouchableOpacity>
           <View style={{ height: 40 }} />
@@ -412,20 +449,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
-  },
-  colorPalette: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  colorCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  colorCircleSelected: {
-    borderWidth: 3,
-    borderColor: "#333",
   },
   saveButton: {
     backgroundColor: "#007AFF",

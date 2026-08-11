@@ -14,14 +14,26 @@ interface CardItemProps {
 }
 
 const getBankLogo = (bankName: string) => {
-  const b = bankName.toLowerCase();
-  if (b.includes('bbva')) return 'https://logo.clearbit.com/bbva.com';
-  if (b.includes('santander')) return 'https://logo.clearbit.com/santander.com';
-  if (b.includes('revolut')) return 'https://logo.clearbit.com/revolut.com';
-  if (b.includes('openbank')) return 'https://logo.clearbit.com/openbank.com';
-  if (b.includes('ualá') || b.includes('uala')) return 'https://logo.clearbit.com/uala.mx';
-  if (b.includes('plata')) return 'https://logo.clearbit.com/platacard.mx';
-  return null;
+  const b = bankName.toLowerCase().trim().replace(/\s+/g, '');
+  if (!b) return null;
+  if (b.includes('bbva')) return 'https://www.google.com/s2/favicons?domain=bbva.mx&sz=128';
+  if (b.includes('santander')) return 'https://www.google.com/s2/favicons?domain=santander.com.mx&sz=128';
+  if (b.includes('revolut')) return 'https://www.google.com/s2/favicons?domain=revolut.com&sz=128';
+  if (b.includes('openbank')) return 'https://www.google.com/s2/favicons?domain=openbank.es&sz=128';
+  if (b.includes('ualá') || b.includes('uala')) return 'https://www.google.com/s2/favicons?domain=uala.com.mx&sz=128';
+  if (b.includes('plata')) return 'https://www.google.com/s2/favicons?domain=platacard.mx&sz=128';
+  
+  // Fallback dinámico para bancos personalizados
+  return `https://www.google.com/s2/favicons?domain=${b}.com&sz=128`;
+};
+
+const formatLastModified = (dateStr: string) => {
+  if (!dateStr) return '';
+  const parts = dateStr.split(' ')[0].split('-');
+  if (parts.length === 3) {
+    return `Último cambio: ${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return `Último cambio: ${dateStr}`;
 };
 
 const CardItem = ({ card, onPress, onPay, onAdjust, onDelete }: CardItemProps) => {
@@ -62,6 +74,10 @@ const CardItem = ({ card, onPress, onPay, onAdjust, onDelete }: CardItemProps) =
       onPress={onPress}
       activeOpacity={0.7}
     >
+      <View style={styles.topMetaRow}>
+        <Text style={styles.lastModifiedText}>{formatLastModified(card.updated_at)}</Text>
+      </View>
+
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <View style={styles.logoContainer}>
@@ -116,7 +132,12 @@ const CardItem = ({ card, onPress, onPay, onAdjust, onDelete }: CardItemProps) =
             )}
           </View>
           
-          <View style={styles.progressBarContainer}>
+          <View style={styles.datesRow}>
+            <Text style={styles.dateText}>Corte: Día {card.due_date || 'N/A'}</Text>
+            <Text style={[styles.dateText, { color: COLORS.credit }]}>Pago: Día {card.payment_due_day || 'N/A'}</Text>
+          </View>
+          
+          <View style={[styles.progressBarContainer, { marginTop: 8 }]}>
             <View 
               style={[
                 styles.progressBarFill, 
@@ -163,6 +184,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
+  },
+  topMetaRow: {
+    marginBottom: 8,
+  },
+  lastModifiedText: {
+    fontSize: 10,
+    color: '#8e8e93',
+    fontWeight: '500',
+  },
+  datesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  dateText: {
+    fontSize: 11,
+    color: '#8e8e93',
+    fontWeight: '500',
   },
   header: {
     flexDirection: 'row',

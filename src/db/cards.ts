@@ -13,13 +13,14 @@ export const addCard = async (
   balance: number,
   creditLimit?: number,
   dueDate?: number,
-  color?: string
+  color?: string,
+  paymentDueDay?: number
 ): Promise<number> => {
   const db = await getDb();
   
   const result = await db.runAsync(
-    `INSERT INTO cards (name, bank, type, balance, credit_limit, due_date, color) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO cards (name, bank, type, balance, credit_limit, due_date, color, payment_due_day) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       name,
       bank,
@@ -28,10 +29,41 @@ export const addCard = async (
       creditLimit || null,
       dueDate || null,
       color || null,
+      paymentDueDay || null,
     ]
   );
   
   return result.lastInsertRowId;
+};
+
+export const updateCard = async (
+  id: number,
+  name: string,
+  bank: string,
+  type: 'debit' | 'credit',
+  balance: number,
+  creditLimit?: number | null,
+  dueDate?: number | null,
+  color?: string | null,
+  paymentDueDay?: number | null
+): Promise<void> => {
+  const db = await getDb();
+  await db.runAsync(
+    `UPDATE cards 
+     SET name = ?, bank = ?, type = ?, balance = ?, credit_limit = ?, due_date = ?, color = ?, payment_due_day = ?, updated_at = datetime('now', 'localtime') 
+     WHERE id = ?`,
+    [
+      name,
+      bank,
+      type,
+      type === 'credit' ? -Math.abs(balance) : balance,
+      creditLimit || null,
+      dueDate || null,
+      color || null,
+      paymentDueDay || null,
+      id,
+    ]
+  );
 };
 
 export const updateCardBalance = async (id: number, newBalance: number) => {
