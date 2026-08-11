@@ -43,8 +43,6 @@ A diferencia de otras aplicaciones financieras en la nube, WalletFlow opera bajo
 
 ## 📱 Vistas de la Aplicación
 
-> *(Tip: Agrega aquí capturas o GIFs de tu aplicación)*
-
 | Dashboard Principal | Ajuste de Tarjeta |  Backup |
 | :---: | :---: | :---: |
 | <img width="592" height="1280" alt="screens" src="https://github.com/user-attachments/assets/c230f430-a436-436f-ab49-b47e7d406b41" /> | <img width="592" height="1280" alt="screens" src="https://github.com/user-attachments/assets/b4d5dd5e-b141-460c-b62b-4de82e721b26" />
